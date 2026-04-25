@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Monitor</title>
+
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background: #121212;
+            color: white;
+            font-family: Arial;
+            text-align: center;
+        }
+
+        .cards {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .card {
+            padding: 20px;
+            background: #1e1e1e;
+            border-radius: 10px;
+            width: 120px;
+        }
+
+        canvas {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>🚀 Live System Monitor</h1>
+
+<div class="cards">
+    <div class="card">CPU<br><span id="cpuVal">0</span>%</div>
+    <div class="card">RAM<br><span id="ramVal">0</span>%</div>
+    <div class="card">DISK<br><span id="diskVal">0</span>%</div>
+</div>
+
+<canvas id="chart" width="900" height="400"></canvas>
+
+<script>
+const socket = io("http://127.0.0.1:5000", {
+    transports: ["websocket"]
+});
+
+socket.on("connect", () => {
+    console.log("✅ Connected");
+});
+
+let labels = [];
+let cpuData = [];
+let ramData = [];
+let diskData = [];
+
+const ctx = document.getElementById('chart').getContext('2d');
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            {
+                label: 'CPU',
+                data: cpuData,
+                borderColor: '#00c3ff',
+                backgroundColor: 'rgba(0,195,255,0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'RAM',
+                data: ramData,
+                borderColor: '#ff4d6d',
+                backgroundColor: 'rgba(255,77,109,0.1)',
+                tension: 0.4
+            },
+            {
+                label: 'Disk',
+                data: diskData,
+                borderColor: '#ffaa00',
+                backgroundColor: 'rgba(255,170,0,0.1)',
+                tension: 0.4
+            }
+        ]
+    },
+    options: {
+        animation: false,
+        scales: {
+            y: {
+                min: 0,
+                max: 100
+            }
+        }
+    }
+});
+
+
+socket.on('update', function(data) {
+
+    labels.push(data.time);
+    cpuData.push(Number(data.cpu));
+    ramData.push(Number(data.ram));
+    diskData.push(Number(data.disk));
+
+    // Update cards
+    document.getElementById("cpuVal").innerText = data.cpu;
+    document.getElementById("ramVal").innerText = data.ram;
+    document.getElementById("diskVal").innerText = data.disk;
+
+    // Alerts
+    if (data.cpu > 80) {
+        console.log("⚠️ High CPU Usage");
+    }
+
+    if (labels.length > 20) {
+        labels.shift();
+        cpuData.shift();
+        ramData.shift();
+        diskData.shift();
+    }
+
+    chart.update();
+});
+</script>
+
+</body>
+</html>

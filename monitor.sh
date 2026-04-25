@@ -1,30 +1,28 @@
 #!/bin/bash
 
-LOG_FILE="system_log.txt"
+LOG_FILE="log.csv"
 
-echo "Starting System Monitor..."
+# Create file if not exists
+if [ ! -f "$LOG_FILE" ]; then
+    echo "timestamp,cpu,ram,disk" > $LOG_FILE
+fi
 
 while true
 do
-    echo "-----------------------------"
-    echo "Time: $(date)"
+    CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print 100 - $8}' | cut -d. -f1)
+    RAM=$(free | awk '/Mem/ {printf("%.0f"), $3/$2 * 100}')
+    DISK=$(df / | awk 'END{print $5}' | sed 's/%//')
 
-    echo "CPU Load:"
-    uptime
+    clear
+    echo "===== SYSTEM MONITOR ====="
+    echo "CPU: $CPU%"
+    echo "RAM: $RAM%"
+    echo "DISK: $DISK%"
 
-    echo "Memory Usage:"
-    free -m
+    echo "$(date),$CPU,$RAM,$DISK" >> $LOG_FILE
 
-    echo "Disk Usage:"
-    df -h
+    # Keep last 100 rows only
+    tail -n 100 $LOG_FILE > temp && mv temp $LOG_FILE
 
-    echo "-----------------------------"
-
-    # Logging
-    echo "Time: $(date)" >> $LOG_FILE
-    free -m >> $LOG_FILE
-    df -h >> $LOG_FILE
-    echo "-----------------------------" >> $LOG_FILE
-
-    sleep 5
+    sleep 2
 done
